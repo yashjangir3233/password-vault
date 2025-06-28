@@ -18,6 +18,10 @@ export default function Vault() {
   const [editMasterPasswordAttempt, setEditMasterPasswordAttempt] = useState('');
   const [editPasswordError, setEditPasswordError] = useState('');
 
+  const [showPassword, setShowPassword] = useState(false);
+  const [showMasterPassword, setShowMasterPassword] = useState(false);
+  const [isPasswordCopied, setIsPasswordCopied] = useState(false);
+
   useEffect(() => {
     fetchVault();
   }, []);
@@ -26,6 +30,27 @@ export default function Vault() {
     localStorage.removeItem('token');
     window.location.reload();
     // onLogout();
+  }
+
+  function generatePassword() {
+    const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+~`|}{[]:;?><,./-=';
+    let password = '';
+    for (let i = 0, n = charset.length; i < 16; ++i) {
+      password += charset.charAt(Math.floor(Math.random() * n));
+    }
+    setForm({ ...form, password });
+    setShowPassword(true)
+  }
+
+  async function copyGeneratedPassword() {
+    if (!form.password) return;
+    try {
+      await navigator.clipboard.writeText(form.password);
+      setIsPasswordCopied(true);
+      setTimeout(() => setIsPasswordCopied(false), 2000); // Reset after 2 seconds
+    } catch (error) {
+      setErrorMessage("Failed to copy password.");
+    }
   }
 
   async function fetchVault() {
@@ -234,34 +259,138 @@ export default function Vault() {
           value={form.username}
           onChange={(e) => setForm({ ...form, username: e.target.value })}
         />
-        <input
-          style={{
-            padding: '12px',
-            borderRadius: '5px',
-            border: '1px solid #444444',
-            backgroundColor: '#3a3a3a',
-            color: '#e0e0e0',
-            fontSize: '1em',
-          }}
-          type="password"
-          placeholder="Password"
-          value={form.password}
-          onChange={(e) => setForm({ ...form, password: e.target.value })}
-        />
-        <input
-          style={{
-            padding: '12px',
-            borderRadius: '5px',
-            border: '1px solid #444444',
-            backgroundColor: '#3a3a3a',
-            color: '#e0e0e0',
-            fontSize: '1em',
-          }}
-          type="password"
-          placeholder="Master Password"
-          value={form.masterPassword}
-          onChange={(e) => setForm({ ...form, masterPassword: e.target.value })}
-        />
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <div style={{ position: 'relative', flexGrow: 1 }}>
+            <input
+              style={{
+                padding: '12px',
+                borderRadius: '5px',
+                border: '1px solid #444444',
+                backgroundColor: '#3a3a3a',
+                color: '#e0e0e0',
+                fontSize: '1em',
+                width: '100%',
+                boxSizing: 'border-box',
+                paddingRight: '40px', // Space for the icon
+              }}
+              type={showPassword ? 'text' : 'password'}
+              placeholder="Password"
+              value={form.password}
+              onChange={(e) => setForm({ ...form, password: e.target.value })}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              style={{
+                position: 'absolute',
+                right: '10px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                color: '#888888',
+                padding: '5px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              {showPassword ? (
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.54 18.54 0 0 1 2.21-2.94m5.13-5.13A10.07 10.07 0 0 1 12 4c7 0 11 8 11 8a18.54 18.54 0 0 1-2.21 2.94m-5.13 5.13L2 22l2-2"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+              ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+              )}
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={generatePassword}
+            style={{
+              padding: '12px 20px',
+              borderRadius: '5px',
+              border: 'none',
+              backgroundColor: '#005500',
+              color: '#ffffff',
+              fontSize: '1em',
+              cursor: 'pointer',
+              transition: 'background-color 0.3s ease',
+            }}
+            onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#007700'}
+            onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#005500'}
+          >
+            Generate
+          </button>
+          <button
+            type="button"
+            onClick={copyGeneratedPassword}
+            disabled={!form.password}
+            style={{
+              padding: '12px',
+              borderRadius: '5px',
+              border: 'none',
+              backgroundColor: form.password ? '#000088' : '#555555',
+              color: '#ffffff',
+              cursor: form.password ? 'pointer' : 'not-allowed',
+              transition: 'background-color 0.3s ease',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+            onMouseOver={(e) => { if (form.password) e.currentTarget.style.backgroundColor = '#0000aa'; }}
+            onMouseOut={(e) => { if (form.password) e.currentTarget.style.backgroundColor = '#000088'; }}
+            title="Copy Password"
+          >
+            {isPasswordCopied ? (
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            )}
+          </button>
+        </div>
+        <div style={{ position: 'relative' }}>
+          <input
+            style={{
+              padding: '12px',
+              borderRadius: '5px',
+              border: '1px solid #444444',
+              backgroundColor: '#3a3a3a',
+              color: '#e0e0e0',
+              fontSize: '1em',
+              width: '100%',
+              boxSizing: 'border-box',
+              paddingRight: '40px', // Space for the icon
+            }}
+            type={showMasterPassword ? 'text' : 'password'}
+            placeholder="Master Password"
+            value={form.masterPassword}
+            onChange={(e) => setForm({ ...form, masterPassword: e.target.value })}
+          />
+          <button
+            type="button"
+            onClick={() => setShowMasterPassword(!showMasterPassword)}
+            style={{
+              position: 'absolute',
+              right: '10px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              color: '#888888',
+              padding: '5px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            {showMasterPassword ? (
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.54 18.54 0 0 1 2.21-2.94m5.13-5.13A10.07 10.07 0 0 1 12 4c7 0 11 8 11 8a18.54 18.54 0 0 1-2.21 2.94m-5.13 5.13L2 22l2-2"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+            )}
+          </button>
+        </div>
         <button
           type="submit"
           style={{
