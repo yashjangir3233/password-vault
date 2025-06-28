@@ -18,39 +18,49 @@ router.post('/signup', async (req, res) => {
   }
 });
 
-// router.post('/login', async (req, res) => {
-//   const { email, password } = req.body;
-//   const user = await User.findOne({ email });
-//   if (!user) return res.status(401).json({ msg: 'Invalid credentials' });
-
-//   const isMatch = await bcrypt.compare(password, user.hashedPassword);
-//   if (!isMatch) return res.status(401).json({ msg: 'Invalid credentials' });
-
-//   const token = jwt.sign({ userId: user._id, email }, process.env.JWT_SECRET, { expiresIn: '1h' });
-//   res.json({ token });
-// });
-
 router.post('/login', async (req, res) => {
-  const { email, password, token } = req.body;
+  try{
+
+  const { email, password } = req.body;
   const user = await User.findOne({ email });
   if (!user) return res.status(401).json({ msg: 'Invalid credentials' });
 
   const isMatch = await bcrypt.compare(password, user.hashedPassword);
   if (!isMatch) return res.status(401).json({ msg: 'Invalid credentials' });
 
-  // If 2FA is enabled, verify token
-  if (user.is2FAEnabled) {
-    const isValidToken = speakeasy.totp.verify({
-      secret: user.twoFASecret,
-      encoding: 'base32',
-      token,
-    });
-    if (!isValidToken) return res.status(401).json({ msg: '2FA token invalid' });
+  const token = jwt.sign({ userId: user._id, email }, process.env.JWT_SECRET, { expiresIn: '1h' });
+  res.json({ token });
+  }catch(err){
+    res.status(500).json({error:err.message})
   }
-
-  const jwtToken = jwt.sign({ userId: user._id, email }, process.env.JWT_SECRET, { expiresIn: '1h' });
-  res.json({ token: jwtToken, userId: user._id });
 });
+
+// router.post('/login', async (req, res) => {
+//   try{
+
+//   const { email, password, token } = req.body;
+//   const user = await User.findOne({ email });
+//   if (!user) return res.status(401).json({ msg: 'Invalid credentials' });
+
+//   const isMatch = await bcrypt.compare(password, user.hashedPassword);
+//   if (!isMatch) return res.status(401).json({ msg: 'Invalid credentials' });
+
+//   // If 2FA is enabled, verify token
+//   if (user.is2FAEnabled) {
+//     const isValidToken = speakeasy.totp.verify({
+//       secret: user.twoFASecret,
+//       encoding: 'base32',
+//       token,
+//     });
+//     if (!isValidToken) return res.status(401).json({ msg: '2FA token invalid' });
+//   }
+
+//   const jwtToken = jwt.sign({ userId: user._id, email }, process.env.JWT_SECRET, { expiresIn: '1h' });
+//   res.json({ token: jwtToken, userId: user._id });
+//   }catch(err){
+//     res.status(500).json({error:err.message})
+//   }
+// });
 
 
 router.get('/2fa/setup', async (req, res) => {

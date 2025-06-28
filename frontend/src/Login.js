@@ -13,9 +13,11 @@ export default function Login({ onLogin }) {
     setErrorMessage(''); // Clear previous errors
     try {
       const res = await API.post('/auth/login', { email, password, token });
+      console.log('this is from local',res)
       localStorage.setItem('token', res.data.token);
       onLogin(); // navigate to dashboard
     } catch (err) {
+      console.log('this is error',err)
       if (err.response?.data?.msg === '2FA token invalid') {
         setErrorMessage('Invalid 2FA code.');
       } else if (err.response?.status === 401 && !token) {
