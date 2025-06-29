@@ -12,15 +12,16 @@ export default function Vault() {
   const [currentRevealId, setCurrentRevealId] = useState(null);
   const [revealMasterPasswordInput, setRevealMasterPasswordInput] = useState('');
   const [copiedEntryId, setCopiedEntryId] = useState(null);
+  const [actionAfterReveal, setActionAfterReveal] = useState(null);
 
   const [showEditMasterPasswordModal, setShowEditMasterPasswordModal] = useState(false);
   const [currentEntryToEdit, setCurrentEntryToEdit] = useState(null);
   const [editMasterPasswordAttempt, setEditMasterPasswordAttempt] = useState('');
   const [editPasswordError, setEditPasswordError] = useState('');
-
   const [showPassword, setShowPassword] = useState(false);
   const [showMasterPassword, setShowMasterPassword] = useState(false);
   const [isPasswordCopied, setIsPasswordCopied] = useState(false);
+  const [showRevealPassword, setShowRevealPassword] = useState(false);
 
   useEffect(() => {
     fetchVault();
@@ -143,28 +144,41 @@ export default function Vault() {
     }
     try {
       const res = await API.post(`/vault/decrypt/${currentRevealId}`, { masterPassword: revealMasterPasswordInput });
-      setRevealed({ ...revealed, [currentRevealId]: res.data.password });
+      const password = res.data.password;
+      setRevealed({ ...revealed, [currentRevealId]: password });
       setShowRevealMasterPasswordInput(false);
       setRevealMasterPasswordInput('');
       setErrorMessage('');
+
+      if (actionAfterReveal && actionAfterReveal.type === 'copy' && actionAfterReveal.entryId === currentRevealId) {
+        await navigator.clipboard.writeText(password);
+        setCopiedEntryId(currentRevealId);
+        setTimeout(() => setCopiedEntryId(null), 2000);
+        setActionAfterReveal(null);
+      }
     } catch (error) {
       setErrorMessage('Incorrect master password.');
+      setActionAfterReveal(null);
     }
   }
 
   async function copyToClipboard(id) {
-    if (!revealed[id]) {
-      setErrorMessage("Password is hidden. Reveal it first.");
-      return;
-    }
-    try {
-      await navigator.clipboard.writeText(revealed[id]);
-      // setCopyNotificationMessage("Password copied to clipboard!");
-      // setShowCopyNotification(true);
-      // setTimeout(() => setShowCopyNotification(false), 3000); // Hide after 3 seconds
+    if (revealed[id]) {
+      try {
+        await navigator.clipboard.writeText(revealed[id]);
+        setCopiedEntryId(id);
+        setTimeout(() => setCopiedEntryId(null), 2000);
+        setErrorMessage('');
+      } catch (error) {
+        setErrorMessage("Failed to copy password.");
+      }
+    } else {
+      // Set up the action and open the modal
+      setActionAfterReveal({ type: 'copy', entryId: id });
+      setCurrentRevealId(id);
+      setShowRevealMasterPasswordInput(true);
+      setRevealMasterPasswordInput('');
       setErrorMessage('');
-    } catch (error) {
-      setErrorMessage("Failed to copy password.");
     }
   }
 
@@ -615,20 +629,49 @@ export default function Vault() {
                 {errorMessage}
               </div>
             )}
-            <input
-              type="password"
-              placeholder="Master Password"
-              value={revealMasterPasswordInput}
-              onChange={(e) => setRevealMasterPasswordInput(e.target.value)}
-              style={{
-                padding: '12px',
-                borderRadius: '5px',
-                border: '1px solid #444444',
-                backgroundColor: '#3a3a3a',
-                color: '#e0e0e0',
-                fontSize: '1em',
-              }}
-            />
+            <div style={{ position: 'relative', width: '100%' }}>
+              <input
+                type={showRevealPassword ? 'text' : 'password'}
+                placeholder="Master Password"
+                value={revealMasterPasswordInput}
+                onChange={(e) => setRevealMasterPasswordInput(e.target.value)}
+                style={{
+                  padding: '12px',
+                  borderRadius: '5px',
+                  border: '1px solid #444444',
+                  backgroundColor: '#3a3a3a',
+                  color: '#e0e0e0',
+                  fontSize: '1em',
+                  width: '100%',
+                  boxSizing: 'border-box',
+                  paddingRight: '40px',
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowRevealPassword(!showRevealPassword)}
+                style={{
+                  position: 'absolute',
+                  right: '10px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: '#888888',
+                  padding: '5px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                {showRevealPassword ? (
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.54 18.54 0 0 1 2.21-2.94m5.13-5.13A10.07 10.07 0 0 1 12 4c7 0 11 8 11 8a18.54 18.54 0 0 1-2.21 2.94m-5.13 5.13L2 22l2-2"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                ) : (
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+                )}
+              </button>
+            </div>
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
               <button
                 onClick={handleRevealMasterPasswordSubmit}
@@ -647,7 +690,10 @@ export default function Vault() {
                 Submit
               </button>
               <button
-                onClick={() => setShowRevealMasterPasswordInput(false)}
+                onClick={() => {
+                  setShowRevealMasterPasswordInput(false);
+                  setActionAfterReveal(null);
+                }}
                 style={{
                   padding: '10px 20px',
                   borderRadius: '5px',
